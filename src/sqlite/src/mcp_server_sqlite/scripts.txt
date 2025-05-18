@@ -4,3 +4,13 @@ CREATE TABLE people (
     role TEXT,
     team TEXT
 );
+
+
+CREATE TABLE team (
+    name TEXT PRIMARY KEY
+);
+
+CREATE TABLE project (
+    name TEXT PRIMARY KEY,
+    description TEXT
+);

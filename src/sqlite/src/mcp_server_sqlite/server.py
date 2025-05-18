@@ -300,6 +300,58 @@ async def main(db_path: str):
                 }
             ),
             types.Tool(
+                name="create_team",
+                description="Creates a new team in the system.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "name": { "type": "string", "description": "Name of the team" },
+                    },
+                    "required": ["name"]
+                }
+            ),
+            types.Tool(
+                name="list_teams",
+                description="Lists all teams in the system.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {},
+                },
+            ),
+            types.Tool(
+                name="get_team",
+                description="Retrieves a team's information by name.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "name": { "type": "string", "description": "Name of the team" },
+                    },
+                    "required": ["name"]
+                }
+            ),
+            types.Tool(
+                name="list_team_members",
+                description="Lists all members of a specific team.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "team_name": { "type": "string", "description": "Name of the team" },
+                    },
+                    "required": ["team_name"]
+                }
+            ),
+            types.Tool(
+                name="update_team",
+                description="Updates an existing team's information.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "name": { "type": "string", "description": "Name of the team" }
+                    },
+                    "required": ["name"]
+                }
+            ),
+            types.Tool(
                 name="read_query",
                 description="Execute a SELECT query on the SQLite database",
                 inputSchema={
@@ -383,6 +435,15 @@ async def main(db_path: str):
                     raise ValueError("Missing role argument")
                 if not arguments or "team" not in arguments:
                     raise ValueError("Missing team argument")
+
+                # Check if the team exists in the people table
+                team_exists = db._execute_query(
+                    "SELECT 1 FROM people WHERE team = ? LIMIT 1",
+                    (arguments["team"],)
+                )
+                if not team_exists:
+                    raise ValueError(f"Team '{arguments['team']}' does not exist. Please create the team first or use an existing team.")
+
                 myuuid = uuid.uuid4()
                 myuuidStr = str(myuuid) 
 
@@ -416,6 +477,15 @@ async def main(db_path: str):
                     raise ValueError("Missing role argument")
                 if not arguments or "team" not in arguments:
                     raise ValueError("Missing team argument")
+
+                # Verify that the person exists before updating
+                person_exists = db._execute_query(
+                    "SELECT 1 FROM people WHERE uuid = ? LIMIT 1",
+                    (arguments["id"],)
+                )
+                if not person_exists:
+                    raise ValueError(f"Person with id '{arguments['id']}' does not exist.")
+
                 db._execute_query(
                     "UPDATE people SET name = ?, role = ?, team = ? WHERE uuid = ?",
                     (arguments["name"], arguments["role"], arguments["team"], arguments["id"]),
@@ -430,6 +500,58 @@ async def main(db_path: str):
                     (arguments["id"])
                 )
                 return [types.TextContent(type="text", text="Person deleted successfully")]
+
+            elif name == "create_team":
+                if not arguments or "name" not in arguments:
+                    raise ValueError("Missing name argument")
+                db._execute_query(
+                    "INSERT INTO team (name) VALUES (?)",
+                    (arguments["name"],)
+                )
+                return [types.TextContent(type="text", text="Team created successfully")]
+                
+
+            elif name == "list_teams":
+                results = db._execute_query(
+                    "SELECT * FROM team"
+                )
+                return [types.TextContent(type="text", text=str(results))]
+            
+            elif name == "get_team":
+                if not arguments or "name" not in arguments:
+                    raise ValueError("Missing name argument")
+                results = db._execute_query(
+                    "SELECT * FROM team WHERE name = ?",
+                    (arguments["name"],)
+                )
+                return [types.TextContent(type="text", text=str(results))]
+
+            elif name == "list_team_members":
+                if not arguments or "team_name" not in arguments:
+                    raise ValueError("Missing team_name argument")
+                results = db._execute_query(
+                    "SELECT * FROM people WHERE team = ?",
+                    (arguments["team_name"],)
+                )
+                return [types.TextContent(type="text", text=str(results))]
+
+            elif name == "update_team":
+                if not arguments or "name" not in arguments:
+                    raise ValueError("Missing name argument")
+
+                # Verify that the team exists before updating
+                team_exists = db._execute_query(
+                    "SELECT 1 FROM team WHERE name = ? LIMIT 1",
+                    (arguments["name"],)
+                )
+                if not team_exists:
+                    raise ValueError(f"Team with name '{arguments['name']}' does not exist.")
+
+                db._execute_query(
+                    "UPDATE team SET name = ? WHERE name = ?",
+                    (arguments["name"]),
+                )
+                return [types.TextContent(type="text", text="Team updated successfully")]
 
             elif name == "describe_table":
                 if not arguments or "table_name" not in arguments:
