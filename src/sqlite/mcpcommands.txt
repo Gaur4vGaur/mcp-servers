@@ -1,6 +1,9 @@
- C:\1My\projects\mcp\ai-cookbook-main\mcp\crash-course\3-simple-server-setup
+  cd C:\1My\projects\mcp\servers-main\src\sqlite
 
 npx @modelcontextprotocol/inspector uv --directory . run <full path to server>
 
 
 uv run .\client-stdio.py
+
+
+uv run mcp dev src/mcp_server_sqlite/server.py:wrapper  

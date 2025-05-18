@@ -256,6 +256,50 @@ async def main(db_path: str):
                 }
             ),
             types.Tool(
+                name="get_person",
+                description="Retrieves a person's information by ID.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "id": { "type": "string", "description": "Unique person ID" },
+                    },
+                    "required": ["id"]
+                }
+            ),
+            types.Tool(
+                name="list_people",
+                description="Lists all people in the system.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {},
+                },
+            ),
+            types.Tool(
+                name="update_person",
+                description="Updates an existing person's information.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "id": { "type": "string", "description": "Unique person ID" },
+                        "name": { "type": "string", "description": "Full name of the person" },
+                        "role": { "type": "string", "description": "Job title or role" },
+                        "team": { "type": "string", "description": "Team name" },
+                    },
+                    "required": ["id", "name", "role", "team"]
+                }
+            ),
+            types.Tool(
+                name="delete_person",
+                description="Deletes a person from the system by ID.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "id": { "type": "string", "description": "Unique person ID" },
+                    },
+                    "required": ["id"]
+                }
+            ),
+            types.Tool(
                 name="read_query",
                 description="Execute a SELECT query on the SQLite database",
                 inputSchema={
@@ -331,6 +375,61 @@ async def main(db_path: str):
                     "SELECT name FROM sqlite_master WHERE type='table'"
                 )
                 return [types.TextContent(type="text", text=str(results))]
+
+            elif name == "create_person":
+                if not arguments or "name" not in arguments:
+                    raise ValueError("Missing name argument")
+                if not arguments or "role" not in arguments:
+                    raise ValueError("Missing role argument")
+                if not arguments or "team" not in arguments:
+                    raise ValueError("Missing team argument")
+                myuuid = uuid.uuid4()
+                myuuidStr = str(myuuid) 
+
+                db._execute_query(
+                    "INSERT INTO people (uuid, name, role, team) VALUES (?, ?, ?, ?)",
+                    (myuuidStr, arguments["name"], arguments["role"], arguments["team"]),
+                )
+                return [types.TextContent(type="text", text="Person created successfully - " + myuuidStr)]
+
+            elif name == "get_person":
+                if not arguments or "id" not in arguments:
+                    raise ValueError("Missing id argument")
+                results = db._execute_query(
+                    "SELECT * FROM people WHERE uuid = ?",
+                    (arguments["id"],)
+                )
+                return [types.TextContent(type="text", text=str(results))]
+
+            elif name == "list_people":
+                results = db._execute_query(
+                    "SELECT * FROM people"
+                )
+                return [types.TextContent(type="text", text=str(results))]
+
+            elif name == "update_person":
+                if not arguments or "id" not in arguments:
+                    raise ValueError("Missing id argument")
+                if not arguments or "name" not in arguments:
+                    raise ValueError("Missing name argument")
+                if not arguments or "role" not in arguments:
+                    raise ValueError("Missing role argument")
+                if not arguments or "team" not in arguments:
+                    raise ValueError("Missing team argument")
+                db._execute_query(
+                    "UPDATE people SET name = ?, role = ?, team = ? WHERE uuid = ?",
+                    (arguments["name"], arguments["role"], arguments["team"], arguments["id"]),
+                )
+                return [types.TextContent(type="text", text="Person updated successfully")]
+
+            elif name == "delete_person":
+                if not arguments or "id" not in arguments:
+                    raise ValueError("Missing id argument")
+                db._execute_query(
+                    "DELETE FROM people WHERE uuid = ?",
+                    (arguments["id"])
+                )
+                return [types.TextContent(type="text", text="Person deleted successfully")]
 
             elif name == "describe_table":
                 if not arguments or "table_name" not in arguments:
