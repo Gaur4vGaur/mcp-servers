@@ -12,5 +12,6 @@ CREATE TABLE team (
 
 CREATE TABLE project (
     name TEXT PRIMARY KEY,
-    description TEXT
+    description TEXT,
+    team TEXT
 );

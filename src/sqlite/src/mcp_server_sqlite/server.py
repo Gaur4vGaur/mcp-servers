@@ -352,6 +352,62 @@ async def main(db_path: str):
                 }
             ),
             types.Tool(
+                name="create_project",
+                description="Creates a new project in the system.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "name": { "type": "string", "description": "Name of the project" },
+                        "description": { "type": "string", "description": "Description of the project" },
+                        "team": { "type": "string", "description": "Team name" },
+                    },
+                    "required": ["name", "description", "team"]
+                }
+            ),
+            types.Tool(
+                name="list_projects",
+                description="Lists all projects in the system.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {},
+                },
+            ),
+            types.Tool(
+                name="list_project_members",
+                description="Lists all members of a specific project.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "project_name": { "type": "string", "description": "Name of the project" },
+                    },
+                    "required": ["project_name"]
+                }
+            ),
+            types.Tool(
+                name="get_project",
+                description="Retrieves a project's information by name.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "name": { "type": "string", "description": "Name of the project" },
+                    },
+                    "required": ["name"]
+                }
+            ),
+            types.Tool(
+                name="update_project",
+                description="Updates an existing project's information.",
+                inputSchema={
+                    "type": "object",
+                    "properties": {
+                        "name": { "type": "string", "description": "Name of the project" },
+                        "description": { "type": "string", "description": "Description of the project" },
+                        "team": { "type": "string", "description": "Team name" },
+                    },
+                    "required": ["name", "description", "team"]
+                }
+            ),
+            types.Tool(
                 name="read_query",
                 description="Execute a SELECT query on the SQLite database",
                 inputSchema={
@@ -552,6 +608,84 @@ async def main(db_path: str):
                     (arguments["name"]),
                 )
                 return [types.TextContent(type="text", text="Team updated successfully")]
+
+            elif name == "create_project":
+                if not arguments or "name" not in arguments:
+                    raise ValueError("Missing name argument")
+                if not arguments or "description" not in arguments:
+                    raise ValueError("Missing description argument")
+                if not arguments or "team" not in arguments:
+                    arguments["team"] = None
+
+                # Check if the team exists in the project table
+                if arguments["team"] is not None and arguments["team"] != '':
+                    team_exists = db._execute_query(
+                        "SELECT 1 FROM team WHERE name = ? LIMIT 1",
+                        (arguments["team"],)
+                    )
+                    if not team_exists:
+                        raise ValueError(f"Team '{arguments['team']}' does not exist. Please create the team first or use an existing team.")
+
+                db._execute_query(
+                    "INSERT INTO project (name, description, team) VALUES (?, ?, ?)",
+                    (arguments["name"], arguments["description"], arguments["team"]),
+                )
+                return [types.TextContent(type="text", text="Project created successfully")]
+
+            elif name == "list_projects":
+                results = db._execute_query(
+                    "SELECT * FROM project"
+                )
+                return [types.TextContent(type="text", text=str(results))]
+
+            elif name == "list_project_members":
+                if not arguments or "project_name" not in arguments:
+                    raise ValueError("Missing project_name argument")
+                results = db._execute_query(
+                    "SELECT project.name AS project_name, people.name AS person_name, people.role, project.team FROM project JOIN people ON project.team = people.team AND project.name = ?",
+                    (arguments["project_name"],)
+                )
+                return [types.TextContent(type="text", text=str(results))]
+
+            elif name == "get_project":
+                if not arguments or "name" not in arguments:
+                    raise ValueError("Missing name argument")
+                results = db._execute_query(
+                    "SELECT * FROM project WHERE name = ?",
+                    (arguments["name"],)
+                )
+                return [types.TextContent(type="text", text=str(results))]
+
+            elif name == "update_project":
+                if not arguments or "name" not in arguments:
+                    raise ValueError("Missing name argument")
+                if not arguments or "description" not in arguments:
+                    raise ValueError("Missing description argument")
+                if not arguments or "team" not in arguments:
+                    arguments["team"] = None
+
+                # Verify that the project exists before updating
+                project_exists = db._execute_query(
+                    "SELECT 1 FROM project WHERE name = ? LIMIT 1",
+                    (arguments["name"],)
+                )
+                if not project_exists:
+                    raise ValueError(f"Project with name '{arguments['name']}' does not exist.")
+
+                # Check if the team exists in the project table
+                if arguments["team"] is not None and arguments["team"] != '':
+                    team_exists = db._execute_query(
+                        "SELECT 1 FROM team WHERE name = ? LIMIT 1",
+                        (arguments["team"],)
+                    )
+                    if not team_exists:
+                        raise ValueError(f"Team '{arguments['team']}' does not exist. Please create the team first or use an existing team.")
+
+                db._execute_query(
+                    "UPDATE project SET description = ?, team = ? WHERE name = ?",
+                    (arguments["description"], arguments["team"], arguments["name"]),
+                )
+                return [types.TextContent(type="text", text="Project updated successfully")]
 
             elif name == "describe_table":
                 if not arguments or "table_name" not in arguments:
