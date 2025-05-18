@@ -1,0 +1,6 @@
+ C:\1My\projects\mcp\ai-cookbook-main\mcp\crash-course\3-simple-server-setup
+
+npx @modelcontextprotocol/inspector uv --directory . run <full path to server>
+
+
+uv run .\client-stdio.py
